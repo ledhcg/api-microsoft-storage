@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { OneDriveService } from "../services/OneDriveService";
 import { StatusCodes } from "http-status-codes";
-import { unlinkSync } from "fs";
 import { MICROSOFT_CONFIG } from "../config/microsoft";
 
 export class UploadController {
@@ -28,17 +27,14 @@ export class UploadController {
         folderName
       );
 
-      // Upload file using the folder ID
+      // Upload file using the folder ID and buffer for Vercel serverless
       const { webUrl, shareUrl, fileName } =
         await this.oneDriveService.uploadImage(
           req.file.originalname,
-          req.file.path,
+          req.file.buffer || req.file.path,
           MICROSOFT_CONFIG.driveId,
           uploadFolderId
         );
-
-      // Delete temp file
-      unlinkSync(req.file.path);
 
       return res.status(StatusCodes.OK).json({
         success: true,
@@ -51,15 +47,6 @@ export class UploadController {
       });
     } catch (error) {
       console.error("Upload error:", error);
-
-      // Cleanup temp file if exists
-      if (req.file?.path) {
-        try {
-          unlinkSync(req.file.path);
-        } catch (e) {
-          console.error("Failed to delete temp file:", e);
-        }
-      }
 
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         success: false,

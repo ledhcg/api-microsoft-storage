@@ -15,6 +15,7 @@
     "development": "cross-env NODE_ENV=development nodemon src/server.ts",
     "staging": "yarn build:staging && cross-env NODE_ENV=staging node build/server.js",
     "production": "yarn build:production && cross-env NODE_ENV=production node build/server.js",
+    "build": "rm -rf build && tsc && tsc-alias",
     "build:staging": "rm -rf build && tsc && tsc-alias && mkdir -p build/logs",
     "build:production": "rm -rf build && tsc && tsc-alias && mkdir -p build/logs",
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -27,10 +28,7 @@
     "type": "git",
     "url": "git+https://github.com/ledhcg/api-ms-storage.git"
   },
-  "keywords": [
-    "face",
-    "prediction"
-  ],
+  "keywords": [],
   "author": "Le Dinh Cuong",
   "license": "ISC",
   "bugs": {

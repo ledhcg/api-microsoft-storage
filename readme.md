@@ -7,7 +7,7 @@ Follow these steps to obtain the required Microsoft Azure credentials:
 1. **Register a new application in Azure AD:**
 
    - Go to [Azure Portal](https://portal.azure.com)
-   - Navigate to "Azure Active Directory" > "App registrations"
+   - Navigate to "Azure Active Directory" > "[App registrations](https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/RegisteredApps)"
    - Click "New registration"
    - Name your application
    - Select "Accounts in any organizational directory (Any Azure AD directory - Multitenant)"
@@ -36,8 +36,9 @@ Follow these steps to obtain the required Microsoft Azure credentials:
 
        1. Go to [Graph Explorer](https://developer.microsoft.com/en-us/graph/graph-explorer)
        2. Sign in with your account
-       3. Make a GET request to: `https://graph.microsoft.com/v1.0/me/drives`
-       4. Look for the "id" field in the response
+       3. Modify all permissions (Files.Read | Files.Read.All | Files.ReadWrite | Files.ReadWrite.All | Sites.Read.All)
+       4. Make a GET request to: `https://graph.microsoft.com/v1.0/me/drives`
+       5. Look for the "id" field in the response
 
      - Option 2: Use SharePoint API:
 

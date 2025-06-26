@@ -1,7 +1,6 @@
 import axios, { AxiosError } from "axios";
 import { MICROSOFT_CONFIG } from "../config/microsoft";
 import { createReadStream } from "fs";
-import { basename } from "path";
 import * as fs from "fs";
 
 interface TokenResponse {
@@ -243,7 +242,7 @@ export class OneDriveService {
 
   async uploadImage(
     originalname: string,
-    filePath: string,
+    filePathOrBuffer: string | Buffer,
     driveId: string,
     folderId: string,
     customFileName?: string
@@ -251,17 +250,31 @@ export class OneDriveService {
     try {
       await this.refreshTokenIfNeeded();
 
-      // Get original file name and extension
-      const originalFileName = basename(filePath);
+      // Get file extension from original name
       const fileExtension = originalname.split(".").pop() || "";
       console.log("🔍 File extension:", fileExtension);
 
       // Use custom file name if provided, otherwise use original
       const fileName = customFileName
         ? `${customFileName}.${fileExtension}`
-        : `${originalFileName}.${fileExtension}`;
+        : originalname;
 
       console.log(`📤 Uploading ${fileName} to folder ID: ${folderId}...`);
+
+      // Handle both buffer (Vercel) and file path (local)
+      let fileData: Buffer | fs.ReadStream;
+      let fileSize: number;
+
+      if (Buffer.isBuffer(filePathOrBuffer)) {
+        // For Vercel serverless - use buffer
+        fileData = filePathOrBuffer;
+        fileSize = filePathOrBuffer.length;
+      } else {
+        // For local development - use file path
+        fileData = createReadStream(filePathOrBuffer);
+        const fileStats = await fs.promises.stat(filePathOrBuffer);
+        fileSize = fileStats.size;
+      }
 
       // 1. Create upload session
       const sessionResponse = await axios.post(
@@ -276,15 +289,9 @@ export class OneDriveService {
       );
 
       const uploadUrl = sessionResponse.data.uploadUrl;
-      const fileStream = createReadStream(filePath);
-      const fileStats = await fs.promises.stat(filePath);
-      const fileSize = fileStats.size;
 
       // 2. Upload file with progress tracking
-      const chunkSize = 320 * 1024; // 320KB chunks
-      let uploadedBytes = 0;
-
-      const uploadResponse = await axios.put(uploadUrl, fileStream, {
+      const uploadResponse = await axios.put(uploadUrl, fileData, {
         headers: {
           "Content-Length": fileSize,
           "Content-Range": `bytes 0-${fileSize - 1}/${fileSize}`,
