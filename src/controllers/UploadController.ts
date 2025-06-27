@@ -28,7 +28,7 @@ export class UploadController {
       );
 
       // Upload file using the folder ID and buffer for Vercel serverless
-      const { webUrl, shareUrl, fileName, directUrl, embedUrl } =
+      const { webUrl, shareUrl, fileName, directUrl, embedUrl, thumbnailUrl } =
         await this.oneDriveService.uploadImage(
           req.file.originalname,
           req.file.buffer || req.file.path,
@@ -43,6 +43,7 @@ export class UploadController {
           shareUrl,
           directUrl,
           embedUrl,
+          thumbnailUrl,
           fileName,
           folderName: folderName || "uploads",
         },
@@ -54,6 +55,50 @@ export class UploadController {
         success: false,
         message:
           error instanceof Error ? error.message : "Failed to upload image",
+      });
+    }
+  }
+
+  async uploadToPersonalDrive(req: Request, res: Response) {
+    try {
+      if (!req.file) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: "No file uploaded",
+        });
+      }
+
+      const { folderName, customFileName } = req.body;
+
+      // Upload file to personal OneDrive
+      const { webUrl, shareUrl, fileName, directUrl, embedUrl, thumbnailUrl } =
+        await this.oneDriveService.uploadImageToPersonalDrive(
+          req.file.originalname,
+          req.file.buffer || req.file.path,
+          customFileName,
+          folderName
+        );
+
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        data: {
+          webUrl,
+          shareUrl,
+          directUrl,
+          embedUrl,
+          thumbnailUrl,
+          fileName,
+          folderName: folderName || "uploads",
+          uploadType: "personal",
+        },
+      });
+    } catch (error) {
+      console.error("Upload to personal drive error:", error);
+
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message:
+          error instanceof Error ? error.message : "Failed to upload image to personal drive",
       });
     }
   }

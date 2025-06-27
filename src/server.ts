@@ -46,6 +46,10 @@ app.post("/api/upload/image", upload.single("image"), (req, res) =>
   uploadController.uploadImage(req, res)
 );
 
+app.post("/api/upload/personal", upload.single("image"), (req, res) =>
+  uploadController.uploadToPersonalDrive(req, res)
+);
+
 // For local development
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 9000;

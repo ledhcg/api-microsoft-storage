@@ -93,7 +93,14 @@ Follow these steps to obtain the required Microsoft Azure credentials:
      MICROSOFT_CLIENT_SECRET=your_client_secret
      MICROSOFT_TENANT_ID=your_tenant_id
      MICROSOFT_DRIVE_ID=your_drive_id
+     MICROSOFT_USER_EMAIL=your_user_email
      ```
+
+   > **New Feature**: Personal OneDrive Support
+   > 
+   > - `MICROSOFT_USER_EMAIL`: Required for uploading to personal OneDrive
+   > - This email should be the user's Microsoft account email
+   > - Used to access personal OneDrive storage instead of SharePoint
 
 > Note: Keep these credentials secure and never commit them to version control.
 
@@ -145,6 +152,70 @@ Follow these steps to obtain the required Microsoft Azure credentials:
    # or
    yarn production
    ```
+
+## API Endpoints
+
+### Upload to SharePoint/OneDrive (Organization)
+
+**POST** `/api/upload/image`
+
+- **Description**: Upload image to organizational SharePoint/OneDrive
+- **Content-Type**: `multipart/form-data`
+- **Parameters**:
+  - `image` (file): Image file to upload
+  - `folderName` (string, optional): Custom folder name (default: "uploads")
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "webUrl": "https://...",
+    "shareUrl": "https://...",
+    "directUrl": "https://...",
+    "embedUrl": "https://...",
+    "thumbnailUrl": "https://...",
+    "fileName": "image.jpg",
+    "folderName": "uploads"
+  }
+}
+```
+
+### Upload to Personal OneDrive
+
+**POST** `/api/upload/personal`
+
+- **Description**: Upload image to personal OneDrive account
+- **Content-Type**: `multipart/form-data`
+- **Parameters**:
+  - `image` (file): Image file to upload
+  - `folderName` (string, optional): Custom folder name (default: "uploads")
+  - `customFileName` (string, optional): Custom file name (without extension)
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "webUrl": "https://...",
+    "shareUrl": "https://...",
+    "directUrl": "https://...",
+    "embedUrl": "https://...",
+    "thumbnailUrl": "https://...",
+    "fileName": "image.jpg",
+    "folderName": "uploads",
+    "uploadType": "personal"
+  }
+}
+```
+
+### Features
+
+- **Enhanced Thumbnail Support**: All uploads now include thumbnail URLs with fallback options (large → medium → small)
+- **Personal OneDrive Access**: Upload directly to user's personal OneDrive
+- **Custom File Names**: Support for custom file naming
+- **Flexible Folder Structure**: Create custom folders for organization
+- **Multiple URL Types**: Web URL, share URL, direct download URL, embed URL, and thumbnail URL
 
 ### Running Tests
 

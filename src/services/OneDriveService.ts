@@ -38,6 +38,7 @@ interface OneDriveFile {
 export class OneDriveService {
   private accessToken: string | null = null;
   private tokenExpiration: Date | null = null;
+  private personalDriveId: string | null = null;
 
   private async getAccessToken(): Promise<string> {
     try {
@@ -183,6 +184,42 @@ export class OneDriveService {
     }
   }
 
+  async getPersonalDrive(): Promise<string> {
+    try {
+      // Check if we already have the drive ID cached
+      if (this.personalDriveId) {
+        return this.personalDriveId;
+      }
+
+      await this.refreshTokenIfNeeded();
+
+      const userEmail = MICROSOFT_CONFIG.userEmail;
+      if (!userEmail) {
+        throw new Error("MICROSOFT_USER_EMAIL is not configured");
+      }
+
+      console.log(`📂 Fetching personal drive for user: ${userEmail}...`);
+
+      // Get user's drive using their email
+      const response = await axios.get(
+        `https://graph.microsoft.com/v1.0/users/${userEmail}/drive`,
+        {
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      this.personalDriveId = response.data.id;
+      console.log("✅ Personal drive ID:", this.personalDriveId);
+      
+      return this.personalDriveId;
+    } catch (error) {
+      this.handleApiError(error, "Failed to fetch personal drive");
+    }
+  }
+
   async getDriveDetails(driveId: string) {
     try {
       await this.refreshTokenIfNeeded();
@@ -240,13 +277,34 @@ export class OneDriveService {
     );
   }
 
+  async uploadImageToPersonalDrive(
+    originalname: string,
+    filePathOrBuffer: string | Buffer,
+    customFileName?: string,
+    customFolderName?: string
+  ): Promise<{ webUrl: string; shareUrl: string; fileName: string; directUrl: string; embedUrl: string; thumbnailUrl?: string }> {
+    try {
+      // Get personal drive ID
+      const driveId = await this.getPersonalDrive();
+      
+      // Ensure upload folder exists
+      const folderId = await this.ensureUploadFolder(driveId, customFolderName);
+      
+      // Upload the image
+      return await this.uploadImage(originalname, filePathOrBuffer, driveId, folderId, customFileName);
+    } catch (error) {
+      console.error("❌ Upload to personal drive failed:", error);
+      throw error;
+    }
+  }
+
   async uploadImage(
     originalname: string,
     filePathOrBuffer: string | Buffer,
     driveId: string,
     folderId: string,
     customFileName?: string
-  ): Promise<{ webUrl: string; shareUrl: string; fileName: string; directUrl: string; embedUrl: string }> {
+  ): Promise<{ webUrl: string; shareUrl: string; fileName: string; directUrl: string; embedUrl: string; thumbnailUrl?: string }> {
     try {
       await this.refreshTokenIfNeeded();
 
@@ -337,9 +395,10 @@ export class OneDriveService {
       // Extract direct URL from @microsoft.graph.downloadUrl
       const directUrl = itemResponse.data["@microsoft.graph.downloadUrl"];
 
-      // 5. Get thumbnail URL for embedding
+      // 5. Get thumbnail URL for embedding with enhanced selection
+      const selectQuery = "large,medium,small";
       const thumbnailResponse = await axios.get(
-        `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${fileId}/thumbnails`,
+        `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${fileId}/thumbnails?$select=${selectQuery}`,
         {
           headers: {
             Authorization: `Bearer ${this.accessToken}`,
@@ -349,7 +408,9 @@ export class OneDriveService {
       );
 
       // Get the large thumbnail URL (or you can use medium/small)
-      const thumbnailUrl = thumbnailResponse.data.value[0]?.large?.url || "";
+      const thumbnailUrl = thumbnailResponse.data.value[0]?.large?.url || 
+                          thumbnailResponse.data.value[0]?.medium?.url || 
+                          thumbnailResponse.data.value[0]?.small?.url || "";
       
       // Create embed URL using OneDrive's embed format
       // Extract the share ID from the share URL
@@ -369,6 +430,7 @@ export class OneDriveService {
         fileName: fileName,
         directUrl: directUrl,
         embedUrl: thumbnailUrl || directUrl, // Use thumbnail URL for embedding, fallback to direct URL
+        thumbnailUrl: thumbnailUrl,
       };
     } catch (error) {
       console.error("❌ Upload failed:", error);
