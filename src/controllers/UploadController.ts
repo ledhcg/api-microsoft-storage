@@ -28,7 +28,7 @@ export class UploadController {
       );
 
       // Upload file using the folder ID and buffer for Vercel serverless
-      const { webUrl, shareUrl, fileName } =
+      const { webUrl, shareUrl, fileName, directUrl, embedUrl } =
         await this.oneDriveService.uploadImage(
           req.file.originalname,
           req.file.buffer || req.file.path,
@@ -41,6 +41,8 @@ export class UploadController {
         data: {
           webUrl,
           shareUrl,
+          directUrl,
+          embedUrl,
           fileName,
           folderName: folderName || "uploads",
         },

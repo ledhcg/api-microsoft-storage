@@ -246,7 +246,7 @@ export class OneDriveService {
     driveId: string,
     folderId: string,
     customFileName?: string
-  ): Promise<{ webUrl: string; shareUrl: string; fileName: string }> {
+  ): Promise<{ webUrl: string; shareUrl: string; fileName: string; directUrl: string; embedUrl: string }> {
     try {
       await this.refreshTokenIfNeeded();
 
@@ -323,15 +323,52 @@ export class OneDriveService {
         }
       );
 
+      // 4. Get direct download URL for the image
+      const itemResponse = await axios.get(
+        `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${fileId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Extract direct URL from @microsoft.graph.downloadUrl
+      const directUrl = itemResponse.data["@microsoft.graph.downloadUrl"];
+
+      // 5. Get thumbnail URL for embedding
+      const thumbnailResponse = await axios.get(
+        `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${fileId}/thumbnails`,
+        {
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Get the large thumbnail URL (or you can use medium/small)
+      const thumbnailUrl = thumbnailResponse.data.value[0]?.large?.url || "";
+      
+      // Create embed URL using OneDrive's embed format
+      // Extract the share ID from the share URL
+      const shareId = sharingResponse.data.link.webUrl.split('/s/')[1]?.split('/')[0] || '';
+      const embedUrl = shareId ? `https://onedrive.live.com/embed?resid=${shareId}` : '';
+
       console.log("✅ File uploaded successfully");
       console.log("📎 Web URL:", uploadResponse.data.webUrl);
       console.log("🔗 Share URL:", sharingResponse.data.link.webUrl);
+      console.log("🖼️ Direct URL:", directUrl);
+      console.log("🖼️ Thumbnail URL:", thumbnailUrl);
       console.log("📄 File name:", fileName);
 
       return {
         webUrl: uploadResponse.data.webUrl,
         shareUrl: sharingResponse.data.link.webUrl,
         fileName: fileName,
+        directUrl: directUrl,
+        embedUrl: thumbnailUrl || directUrl, // Use thumbnail URL for embedding, fallback to direct URL
       };
     } catch (error) {
       console.error("❌ Upload failed:", error);
