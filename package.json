@@ -23,7 +23,8 @@
     "test:ms-drive": "ts-node test/test-ms-drive.ts",
     "test:ms-upload": "ts-node test/test-ms-upload.ts",
     "test:ms-files": "ts-node test/test-ms-files.ts",
-    "test:personal-upload": "ts-node test/test-personal-upload.ts"
+    "test:personal-upload": "ts-node test/test-personal-upload.ts",
+    "test:multi-file-upload": "ts-node test/test-multi-file-upload.ts"
   },
   "repository": {
     "type": "git",

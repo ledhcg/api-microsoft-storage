@@ -155,44 +155,100 @@ Follow these steps to obtain the required Microsoft Azure credentials:
 
 ## API Endpoints
 
-### Upload to SharePoint/OneDrive (Organization)
+### Generic File Upload (All File Types)
+
+**POST** `/api/upload/file`
+
+- **Description**: Upload any file type to organizational SharePoint/OneDrive
+- **Content-Type**: `multipart/form-data`
+- **File Size Limit**: 100MB
+- **Supported File Types**: Images, Documents, Videos, Audio, Archives, and more
+- **Parameters**:
+  - `file` (file): File to upload
+  - `folderName` (string, optional): Custom folder name (default: "uploads")
+  - `customFileName` (string, optional): Custom file name (without extension)
+
+**POST** `/api/upload/file/personal`
+
+- **Description**: Upload any file type to personal OneDrive
+- **Content-Type**: `multipart/form-data`
+- **File Size Limit**: 100MB
+- **Parameters**:
+  - `file` (file): File to upload
+  - `folderName` (string, optional): Custom folder name (default: "uploads")
+  - `customFileName` (string, optional): Custom file name (without extension)
+
+### Image Upload (Backward Compatibility)
 
 **POST** `/api/upload/image`
 
 - **Description**: Upload image to organizational SharePoint/OneDrive
 - **Content-Type**: `multipart/form-data`
+- **File Size Limit**: 10MB
+- **Supported Formats**: JPG, JPEG, PNG, GIF, BMP, WEBP, SVG, ICO, TIFF
 - **Parameters**:
   - `image` (file): Image file to upload
   - `folderName` (string, optional): Custom folder name (default: "uploads")
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "webUrl": "https://...",
-    "shareUrl": "https://...",
-    "directUrl": "https://...",
-    "embedUrl": "https://...",
-    "thumbnailUrl": "https://...",
-    "fileName": "image.jpg",
-    "folderName": "uploads"
-  }
-}
-```
-
-### Upload to Personal OneDrive
 
 **POST** `/api/upload/personal`
 
 - **Description**: Upload image to personal OneDrive account
 - **Content-Type**: `multipart/form-data`
+- **File Size Limit**: 10MB
 - **Parameters**:
   - `image` (file): Image file to upload
   - `folderName` (string, optional): Custom folder name (default: "uploads")
   - `customFileName` (string, optional): Custom file name (without extension)
 
-**Response**:
+### Document Upload
+
+**POST** `/api/upload/document`
+
+- **Description**: Upload document to organizational SharePoint/OneDrive
+- **Content-Type**: `multipart/form-data`
+- **File Size Limit**: 50MB
+- **Supported Formats**: DOC, DOCX, XLS, XLSX, PPT, PPTX, PDF, TXT, RTF, MD, CSV
+- **Parameters**:
+  - `document` (file): Document file to upload
+  - `folderName` (string, optional): Custom folder name (default: "documents")
+  - `customFileName` (string, optional): Custom file name (without extension)
+
+**POST** `/api/upload/document/personal`
+
+- **Description**: Upload document to personal OneDrive
+- **Content-Type**: `multipart/form-data`
+- **File Size Limit**: 50MB
+- **Parameters**:
+  - `document` (file): Document file to upload
+  - `folderName` (string, optional): Custom folder name (default: "documents")
+  - `customFileName` (string, optional): Custom file name (without extension)
+
+### Video Upload
+
+**POST** `/api/upload/video`
+
+- **Description**: Upload video to organizational SharePoint/OneDrive
+- **Content-Type**: `multipart/form-data`
+- **File Size Limit**: 200MB
+- **Supported Formats**: MP4, AVI, MOV, WMV, FLV, WEBM, MKV, 3GP, M4V
+- **Parameters**:
+  - `video` (file): Video file to upload
+  - `folderName` (string, optional): Custom folder name (default: "videos")
+  - `customFileName` (string, optional): Custom file name (without extension)
+
+**POST** `/api/upload/video/personal`
+
+- **Description**: Upload video to personal OneDrive
+- **Content-Type**: `multipart/form-data`
+- **File Size Limit**: 200MB
+- **Parameters**:
+  - `video` (file): Video file to upload
+  - `folderName` (string, optional): Custom folder name (default: "videos")
+  - `customFileName` (string, optional): Custom file name (without extension)
+
+### Response Format (All Endpoints)
+
+**Success Response**:
 ```json
 {
   "success": true,
@@ -201,21 +257,60 @@ Follow these steps to obtain the required Microsoft Azure credentials:
     "shareUrl": "https://...",
     "directUrl": "https://...",
     "embedUrl": "https://...",
-    "thumbnailUrl": "https://...",
-    "fileName": "image.jpg",
+    "thumbnailUrl": "https://..." // Available for images, videos, and documents
+    "fileName": "file.ext",
     "folderName": "uploads",
-    "uploadType": "personal"
+    "fileType": "image|video|office|pdf|text|audio|archive|other",
+    "uploadType": "organizational|personal"
   }
 }
 ```
 
+**Error Response**:
+```json
+{
+  "success": false,
+  "message": "Error description",
+  "error": "Detailed error message"
+}
+```
+
+### File Type Detection
+
+The API automatically detects file types based on file extensions:
+
+- **Images**: jpg, jpeg, png, gif, bmp, webp, svg, ico, tiff, tif
+- **Videos**: mp4, avi, mov, wmv, flv, webm, mkv, 3gp, m4v
+- **Audio**: mp3, wav, flac, aac, ogg, wma, m4a
+- **Office Documents**: doc, docx, xls, xlsx, ppt, pptx
+- **PDF**: pdf
+- **Text Files**: txt, rtf, md, csv
+- **Archives**: zip, rar, 7z, tar, gz
+- **Other**: Any other file type
+
+### Thumbnail Support
+
+Thumbnails are automatically generated for supported file types:
+- ✅ Images (all formats)
+- ✅ Videos (most formats)
+- ✅ Office Documents (Word, Excel, PowerPoint)
+- ✅ PDF files
+- ❌ Audio files, archives, and other formats
+```
+
 ### Features
 
-- **Enhanced Thumbnail Support**: All uploads now include thumbnail URLs with fallback options (large → medium → small)
-- **Personal OneDrive Access**: Upload directly to user's personal OneDrive
-- **Custom File Names**: Support for custom file naming
-- **Flexible Folder Structure**: Create custom folders for organization
+- **Multi-File Type Support**: Upload images, documents, videos, audio files, archives, and more
+- **Enhanced Thumbnail Support**: Automatic thumbnail generation for images, videos, and documents with fallback options (large → medium → small)
+- **Personal OneDrive Access**: Upload directly to user's personal OneDrive account
+- **Organizational SharePoint**: Upload to company SharePoint/OneDrive for Business
+- **Custom File Names**: Support for custom file naming without extension
+- **Flexible Folder Structure**: Create custom folders for organization with default folders per file type
 - **Multiple URL Types**: Web URL, share URL, direct download URL, embed URL, and thumbnail URL
+- **File Type Detection**: Automatic file type classification based on extension
+- **Size Limits**: Different size limits per file type (10MB images, 50MB documents, 200MB videos, 100MB general)
+- **Progress Tracking**: Upload progress monitoring for large files
+- **Error Handling**: Comprehensive error handling with detailed error messages
 
 ### Running Tests
 
@@ -223,16 +318,35 @@ Follow these steps to obtain the required Microsoft Azure credentials:
 
 2. **Run the test suite:**
    ```bash
-   npm run test:ms-auth
-   npm run test:ms-drive
-   npm run test:ms-upload
-   npm run test:ms-files
-   # or
+   # Basic Microsoft Graph API tests
+   npm run test:ms-auth          # Test authentication
+   npm run test:ms-drive         # Test drive access
+   npm run test:ms-upload        # Test basic upload
+   npm run test:ms-files         # Test file operations
+   
+   # Personal OneDrive tests
+   npm run test:personal-upload  # Test personal OneDrive upload
+   
+   # Multi-file type upload tests
+   npm run test:multi-file-upload # Test all file types and endpoints
+   
+   # or using yarn
    yarn test:ms-auth
    yarn test:ms-drive
    yarn test:ms-upload
    yarn test:ms-files
+   yarn test:personal-upload
+   yarn test:multi-file-upload
    ```
+
+3. **For multi-file upload tests:**
+   - Create a `test/test-files/` directory
+   - Add sample files:
+     - `test-image.jpg` (any image file)
+     - `test-document.docx` (any Word document)
+     - `test-video.mp4` (any video file)
+     - `test-document.pdf` (any PDF file)
+   - Run `npm run test:multi-file-upload`
 
 ### Common Issues and Troubleshooting
 

@@ -298,6 +298,27 @@ export class OneDriveService {
     }
   }
 
+  async uploadFileToPersonalDrive(
+    originalname: string,
+    filePathOrBuffer: string | Buffer,
+    customFileName?: string,
+    customFolderName?: string
+  ): Promise<{ webUrl: string; shareUrl: string; fileName: string; directUrl: string; embedUrl: string; thumbnailUrl?: string; fileType: string }> {
+    try {
+      // Get personal drive ID
+      const driveId = await this.getPersonalDrive();
+      
+      // Ensure upload folder exists
+      const folderId = await this.ensureUploadFolder(driveId, customFolderName);
+      
+      // Upload the file
+      return await this.uploadFile(originalname, filePathOrBuffer, driveId, folderId, customFileName);
+    } catch (error) {
+      console.error("❌ Upload file to personal drive failed:", error);
+      throw error;
+    }
+  }
+
   async uploadImage(
     originalname: string,
     filePathOrBuffer: string | Buffer,
@@ -445,6 +466,222 @@ export class OneDriveService {
       }
       throw error;
     }
+  }
+
+  async uploadFile(
+    originalname: string,
+    filePathOrBuffer: string | Buffer,
+    driveId: string,
+    folderId: string,
+    customFileName?: string
+  ): Promise<{ webUrl: string; shareUrl: string; fileName: string; directUrl: string; embedUrl: string; thumbnailUrl?: string; fileType: string }> {
+    try {
+      await this.refreshTokenIfNeeded();
+
+      // Get file extension from original name
+      const fileExtension = originalname.split(".").pop() || "";
+      const fileType = this.getFileType(fileExtension);
+      console.log("🔍 File extension:", fileExtension);
+      console.log("📄 File type:", fileType);
+
+      // Use custom file name if provided, otherwise use original
+      const fileName = customFileName
+        ? `${customFileName}.${fileExtension}`
+        : originalname;
+
+      console.log(`📤 Uploading ${fileName} to folder ID: ${folderId}...`);
+
+      // Handle both buffer (Vercel) and file path (local)
+      let fileData: Buffer | fs.ReadStream;
+      let fileSize: number;
+
+      if (Buffer.isBuffer(filePathOrBuffer)) {
+        // For Vercel serverless - use buffer
+        fileData = filePathOrBuffer;
+        fileSize = filePathOrBuffer.length;
+      } else {
+        // For local development - use file path
+        fileData = createReadStream(filePathOrBuffer);
+        const fileStats = await fs.promises.stat(filePathOrBuffer);
+        fileSize = fileStats.size;
+      }
+
+      // 1. Create upload session
+      const sessionResponse = await axios.post(
+        `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${folderId}:/${fileName}:/createUploadSession`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const uploadUrl = sessionResponse.data.uploadUrl;
+
+      // 2. Upload file with progress tracking
+      const uploadResponse = await axios.put(uploadUrl, fileData, {
+        headers: {
+          "Content-Length": fileSize,
+          "Content-Range": `bytes 0-${fileSize - 1}/${fileSize}`,
+        },
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total!
+          );
+          console.log(`⏳ Upload progress: ${percentCompleted}%`);
+        },
+      });
+
+      const fileId = uploadResponse.data.id;
+
+      // 3. Create sharing link
+      const sharingResponse = await axios.post(
+        `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${fileId}/createLink`,
+        {
+          type: "view",
+          scope: "anonymous",
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // 4. Get direct download URL for the file
+      const itemResponse = await axios.get(
+        `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${fileId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Extract direct URL from @microsoft.graph.downloadUrl
+      const directUrl = itemResponse.data["@microsoft.graph.downloadUrl"];
+
+      // 5. Get thumbnail URL for files that support thumbnails (images, videos, documents)
+      let thumbnailUrl = "";
+      if (this.supportsThumbnails(fileExtension)) {
+        try {
+          const selectQuery = "large,medium,small";
+          const thumbnailResponse = await axios.get(
+            `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${fileId}/thumbnails?$select=${selectQuery}`,
+            {
+              headers: {
+                Authorization: `Bearer ${this.accessToken}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          thumbnailUrl = thumbnailResponse.data.value[0]?.large?.url || 
+                        thumbnailResponse.data.value[0]?.medium?.url || 
+                        thumbnailResponse.data.value[0]?.small?.url || "";
+        } catch (error) {
+          console.log("ℹ️ Thumbnail not available for this file type");
+        }
+      }
+      
+      // Create embed URL using OneDrive's embed format
+      const shareId = sharingResponse.data.link.webUrl.split('/s/')[1]?.split('/')[0] || '';
+      const embedUrl = shareId ? `https://onedrive.live.com/embed?resid=${shareId}` : '';
+
+      console.log("✅ File uploaded successfully");
+      console.log("📎 Web URL:", uploadResponse.data.webUrl);
+      console.log("🔗 Share URL:", sharingResponse.data.link.webUrl);
+      console.log("🖼️ Direct URL:", directUrl);
+      console.log("🖼️ Thumbnail URL:", thumbnailUrl);
+      console.log("📄 File name:", fileName);
+      console.log("📄 File type:", fileType);
+
+      return {
+        webUrl: uploadResponse.data.webUrl,
+        shareUrl: sharingResponse.data.link.webUrl,
+        fileName: fileName,
+        directUrl: directUrl,
+        embedUrl: thumbnailUrl || directUrl,
+        thumbnailUrl: thumbnailUrl,
+        fileType: fileType,
+      };
+    } catch (error) {
+      console.error("❌ Upload failed:", error);
+      if (axios.isAxiosError(error)) {
+        console.error("Response data:", error.response?.data);
+        console.error("Status:", error.response?.status);
+        throw new Error(
+          `Upload failed: ${
+            error.response?.data?.error?.message || error.message
+          }`
+        );
+      }
+      throw error;
+    }
+  }
+
+  // Helper method to determine file type
+  private getFileType(extension: string): string {
+    const ext = extension.toLowerCase();
+    
+    // Images
+    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico', 'tiff', 'tif'].includes(ext)) {
+      return 'image';
+    }
+    
+    // Videos
+    if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv', '3gp', 'm4v'].includes(ext)) {
+      return 'video';
+    }
+    
+    // Audio
+    if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'wma', 'm4a'].includes(ext)) {
+      return 'audio';
+    }
+    
+    // Microsoft Office Documents
+    if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
+      return 'office';
+    }
+    
+    // PDF
+    if (ext === 'pdf') {
+      return 'pdf';
+    }
+    
+    // Text files
+    if (['txt', 'rtf', 'md', 'csv'].includes(ext)) {
+      return 'text';
+    }
+    
+    // Archives
+    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) {
+      return 'archive';
+    }
+    
+    return 'other';
+  }
+
+  // Helper method to check if file type supports thumbnails
+  private supportsThumbnails(extension: string): boolean {
+    const ext = extension.toLowerCase();
+    const thumbnailSupportedTypes = [
+      // Images
+      'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'tif',
+      // Videos
+      'mp4', 'avi', 'mov', 'wmv', 'webm', 'mkv',
+      // Office documents
+      'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+      // PDF
+      'pdf'
+    ];
+    return thumbnailSupportedTypes.includes(ext);
   }
 
   // Helper method to generate a unique filename
