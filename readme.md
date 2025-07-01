@@ -1,3 +1,17 @@
+# Microsoft Storage API
+
+## 🏗️ New Project Structure
+
+The project has been restructured for better organization and maintainability:
+
+- **📁 `src/config/`**: Contains configuration files (multer, microsoft)
+- **📁 `src/middleware/`**: Contains middleware (multer configurations)
+- **📁 `src/routes/`**: Organizes all routes systematically
+- **📁 `src/controllers/`**: Business logic
+- **📁 `src/services/`**: External service integrations
+
+> 📖 See details in [ARCHITECTURE.md](./ARCHITECTURE.md)
+
 ## Environment Configuration Guide
 
 ### Getting Microsoft Azure Credentials
@@ -155,10 +169,51 @@ Follow these steps to obtain the required Microsoft Azure credentials:
 
 ## API Endpoints
 
-### Generic File Upload (All File Types)
+### Personal OneDrive Routes
 
-**POST** `/api/upload/file`
+**POST** `/api/upload/personal/file`
+- **Description**: Upload any file type to personal OneDrive
+- **Content-Type**: `multipart/form-data`
+- **File Size Limit**: 100MB
+- **Supported File Types**: Images, Documents, Videos, Audio, Archives, and more
+- **Parameters**:
+  - `file` (file): File to upload
+  - `folderName` (string, optional): Custom folder name (default: "uploads")
+  - `customFileName` (string, optional): Custom file name (without extension)
 
+**POST** `/api/upload/personal/image`
+- **Description**: Upload image to personal OneDrive
+- **Content-Type**: `multipart/form-data`
+- **File Size Limit**: 10MB
+- **Supported Formats**: JPG, JPEG, PNG, GIF, BMP, WEBP, SVG, ICO, TIFF
+- **Parameters**:
+  - `image` (file): Image file to upload
+  - `folderName` (string, optional): Custom folder name (default: "uploads")
+  - `customFileName` (string, optional): Custom file name (without extension)
+
+**POST** `/api/upload/personal/document`
+- **Description**: Upload document to personal OneDrive
+- **Content-Type**: `multipart/form-data`
+- **File Size Limit**: 50MB
+- **Supported Formats**: DOC, DOCX, XLS, XLSX, PPT, PPTX, PDF, TXT, RTF, MD, CSV
+- **Parameters**:
+  - `document` (file): Document file to upload
+  - `folderName` (string, optional): Custom folder name (default: "documents")
+  - `customFileName` (string, optional): Custom file name (without extension)
+
+**POST** `/api/upload/personal/video`
+- **Description**: Upload video to personal OneDrive
+- **Content-Type**: `multipart/form-data`
+- **File Size Limit**: 200MB
+- **Supported Formats**: MP4, AVI, MOV, WMV, FLV, WEBM, MKV, 3GP, M4V
+- **Parameters**:
+  - `video` (file): Video file to upload
+  - `folderName` (string, optional): Custom folder name (default: "videos")
+  - `customFileName` (string, optional): Custom file name (without extension)
+
+### SharePoint/Organizational Routes
+
+**POST** `/api/upload/sharepoint/file`
 - **Description**: Upload any file type to organizational SharePoint/OneDrive
 - **Content-Type**: `multipart/form-data`
 - **File Size Limit**: 100MB
@@ -168,20 +223,7 @@ Follow these steps to obtain the required Microsoft Azure credentials:
   - `folderName` (string, optional): Custom folder name (default: "uploads")
   - `customFileName` (string, optional): Custom file name (without extension)
 
-**POST** `/api/upload/file/personal`
-
-- **Description**: Upload any file type to personal OneDrive
-- **Content-Type**: `multipart/form-data`
-- **File Size Limit**: 100MB
-- **Parameters**:
-  - `file` (file): File to upload
-  - `folderName` (string, optional): Custom folder name (default: "uploads")
-  - `customFileName` (string, optional): Custom file name (without extension)
-
-### Image Upload (Backward Compatibility)
-
-**POST** `/api/upload/image`
-
+**POST** `/api/upload/sharepoint/image`
 - **Description**: Upload image to organizational SharePoint/OneDrive
 - **Content-Type**: `multipart/form-data`
 - **File Size Limit**: 10MB
@@ -189,21 +231,9 @@ Follow these steps to obtain the required Microsoft Azure credentials:
 - **Parameters**:
   - `image` (file): Image file to upload
   - `folderName` (string, optional): Custom folder name (default: "uploads")
-
-**POST** `/api/upload/personal`
-
-- **Description**: Upload image to personal OneDrive account
-- **Content-Type**: `multipart/form-data`
-- **File Size Limit**: 10MB
-- **Parameters**:
-  - `image` (file): Image file to upload
-  - `folderName` (string, optional): Custom folder name (default: "uploads")
   - `customFileName` (string, optional): Custom file name (without extension)
 
-### Document Upload
-
-**POST** `/api/upload/document`
-
+**POST** `/api/upload/sharepoint/document`
 - **Description**: Upload document to organizational SharePoint/OneDrive
 - **Content-Type**: `multipart/form-data`
 - **File Size Limit**: 50MB
@@ -213,34 +243,11 @@ Follow these steps to obtain the required Microsoft Azure credentials:
   - `folderName` (string, optional): Custom folder name (default: "documents")
   - `customFileName` (string, optional): Custom file name (without extension)
 
-**POST** `/api/upload/document/personal`
-
-- **Description**: Upload document to personal OneDrive
-- **Content-Type**: `multipart/form-data`
-- **File Size Limit**: 50MB
-- **Parameters**:
-  - `document` (file): Document file to upload
-  - `folderName` (string, optional): Custom folder name (default: "documents")
-  - `customFileName` (string, optional): Custom file name (without extension)
-
-### Video Upload
-
-**POST** `/api/upload/video`
-
+**POST** `/api/upload/sharepoint/video`
 - **Description**: Upload video to organizational SharePoint/OneDrive
 - **Content-Type**: `multipart/form-data`
 - **File Size Limit**: 200MB
 - **Supported Formats**: MP4, AVI, MOV, WMV, FLV, WEBM, MKV, 3GP, M4V
-- **Parameters**:
-  - `video` (file): Video file to upload
-  - `folderName` (string, optional): Custom folder name (default: "videos")
-  - `customFileName` (string, optional): Custom file name (without extension)
-
-**POST** `/api/upload/video/personal`
-
-- **Description**: Upload video to personal OneDrive
-- **Content-Type**: `multipart/form-data`
-- **File Size Limit**: 200MB
 - **Parameters**:
   - `video` (file): Video file to upload
   - `folderName` (string, optional): Custom folder name (default: "videos")
